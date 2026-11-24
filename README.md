@@ -5,26 +5,25 @@ TraceNet follows stolen money hop-by-hop through a transaction graph, scores mul
 links accounts that share devices/phones/IPs into fraud rings, and gives investigators a
 **freeze-first list** plus an auto-generated trail report.
 
-## Use it (3 steps)  ·  इस्तेमाल (3 कदम)
+## Use it (3 steps)  ·  
 **Start:** double-click `START_TraceNet.bat` (Windows) or run `bash start.sh` (Mac/Linux). The first time it installs what it needs; after that it opens in your browser.
-**शुरू करें:** `START_TraceNet.bat` पर डबल-क्लिक करें (Windows) या `bash start.sh` चलाएँ। पहली बार ज़रूरी चीज़ें अपने आप इंस्टॉल होती हैं; फिर ब्राउज़र में खुल जाता है।
 
-1. **Add data / डेटा डालें** – drop the files from the banks (Excel, CSV, or text-PDF). TraceNet guesses what each file is and which column is which. Fix only what is wrong. No complaint file? Type the complaint in by hand.
-2. **Check / जाँचें** – see how many payments, accounts and complaints were read, and any warnings in plain words. Optionally join a name or UPI id to an account number.
-3. **Result / नतीजा** – a numbered "what to do now" list, the money-trail picture, who to freeze first, the gang, ready-made requests for each bank, and a report.
+1. **Add data ** – drop the files from the banks (Excel, CSV, or text-PDF). TraceNet guesses what each file is and which column is which. Fix only what is wrong. No complaint file? Type the complaint in by hand.
+2. **Check ** – see how many payments, accounts and complaints were read, and any warnings in plain words. Optionally join a name or UPI id to an account number.
+3. **Result ** – a numbered "what to do now" list, the money-trail picture, who to freeze first, the gang, ready-made requests for each bank, and a report.
 
 Want to practise first? Click **Try with demo data**, or upload the files in `sample_bank_files/` (they look like real bank files).
 
-## Reading the pictures  ·  चित्र कैसे पढ़ें
+## Reading the pictures  
 Every picture has **one line above it** (what it shows) and **an action box below it** (what to do next). The money-trail picture runs left to right: victim ★ → Step 1 → Step 2 → … → cash-out. The **number in each circle** is the order in which accounts received the money, and the **colour** says what is true now: orange = money still inside (freeze it), grey = passed on, red diamond = cash-out, white `?` = bank has not replied. Each number is explained in plain words under the picture. Pictures show account numbers shortened (…4321) with the bank name; the tables and the 'What to do now' steps use the full number, so use those for letters to banks. A glossary (mule, freeze/lien, step, gang ring, golden hour, KYC, UTR…) is at the top of the result page.
 
-## Connections between complaints  ·  शिकायतों के बीच जुड़ाव
+## Connections between complaints  
 In step 3 switch to **"Connections between complaints"**. TraceNet follows all complaints together on one shared ledger (so an account holding money from two victims is split fairly, nothing counted twice) and gives every pair of complaints a soft score:
 same account (more points for mule-like ones) · same cash-out point · same gang ring (phone/device/IP) · a victim's account used to pass on another's money · frauds close in time.
 Strong/Probable links join complaints into a **CASE group**. You get: a **new-complaint alert** (is today's complaint linked to earlier ones, and what is still inside the shared accounts), a **network picture**, **shared accounts + money split**, **time pattern** (speed to cash-out, night-time, gap between complaints, new accounts per day), and a **combined report + one bank file** for the whole case.
 On the demo data it recovers the 4 planted cases exactly (14 complaints, no wrong links). Weights live in `tracenet/linking.py` (`STRONG`, `PROBABLE`, `POSSIBLE`).
 
-## What data can I feed in?  ·  कौन-सा डेटा चलेगा?
+## What data can I feed in?  
 Any of these, mixed together, in Excel / CSV / text-PDF (not scanned pictures):
 
 | File | What it has | Needed columns (any name that means the same) |
