@@ -46,3 +46,10 @@ M4C0,4,mule_L3
 M4C1,4,mule_L3
 CO4_ATM,4,cashout
 CO4_WALLET,4,cashout
+M5A0,5,mule_L1
+M5B0,5,mule_L2
+M5B1,5,mule_L2
+M5B2,5,mule_L2
+M5B3,5,mule_L2
+CO5_ATM,5,cashout
+CO5_WALLET,5,cashout

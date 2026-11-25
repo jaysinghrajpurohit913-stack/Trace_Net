@@ -1,0 +1,7 @@
+domain,ip,registrar,created,expires,nameservers,hosting,asn,country,ssl_issuer,ssl_first_seen,first_seen,last_seen,complaint_id,note
+secure-kyc-update.example,203.0.113.10,NameBazaar Pvt Ltd,2026-09-20,2026-12-20,"ns1.fastdns.example, ns2.fastdns.example",CHEAPVPS-LLC,AS64500,NL,Let's Encrypt,2026-09-20,2026-10-03 22:40,2026-10-12,"NCRP-10, NCRP-11",Link sent by SMS as 'KYC expired'
+kyc-verify-sbi.example,203.0.113.10,NameBazaar Pvt Ltd,2026-09-20,2026-12-20,"ns1.fastdns.example, ns2.fastdns.example",CHEAPVPS-LLC,AS64500,NL,Let's Encrypt,2026-09-21,2026-10-08 20:15,,NCRP-20,Fake bank page
+upi-refund-claim.example,198.51.100.44,NameBazaar Pvt Ltd,2026-09-20,2026-12-20,"ns1.fastdns.example, ns3.fastdns.example",SMALLHOST-INC,AS64501,US,Let's Encrypt,2026-09-22,2026-10-18 18:30,,NCRP-40,"Refund scam - different server, same name server and registration batch"
+hdfc-rewards-portal.example,192.0.2.99,Global Domains LLC,2026-08-01,2027-08-01,ns1.cloudflare.example,CLOUDFLARENET,AS64502,US,Google Trust Services,2026-08-01,2026-10-13 21:00,,NCRP-30,Behind a CDN
+sbi-reward-points.example,192.0.2.99,Other Registry Co,2026-10-05,2026-11-05,ns2.cloudflare.example,CLOUDFLARENET,AS64502,US,Google Trust Services,2026-10-05,2026-10-22 02:00,,NCRP-50,Behind the same CDN: weak link only
+,203.0.113.77,,,,,M247 VPN SERVICES,AS64503,RO,,,2026-10-04 05:00,,NCRP-10,IP seen in the victim's bank alert

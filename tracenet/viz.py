@@ -1,6 +1,6 @@
 import numpy as np
 import plotly.graph_objects as go
-from .engine import is_cashout, pretty
+from .engine import is_cashout, pretty, short
 
 
 def _layout(trail):
@@ -232,4 +232,83 @@ def story_figure(trail, feats, nodes, t, frontier=(), victim_label=""):
                                  gridcolor="#EEF2F7", zeroline=False, range=[-.5, max(hops) + .5], tickfont=dict(size=13, color="#334155")),
                       yaxis=dict(visible=False, range=[-(rows / 2) - .9, rows / 2 + .3]),
                       legend=dict(orientation="h", y=-.02, yanchor="top", font=dict(size=12)))
+    return fig
+
+
+# ------------------------------------------------------------- relationship graph (all entity types) ----
+GRAPH_STYLE = {   # kind -> (colour, symbol, English label)
+    "complaint": ("#2f6fed", "star", "Complaint"), "acct": ("#e8a317", "circle", "Account"), "domain": ("#8b5cf6", "square", "Domain"),
+    "ip": ("#0f8a6d", "diamond", "IP address"), "ns": ("#14b8a6", "triangle-up", "Name server"), "registrar": ("#94a3b8", "triangle-down", "Registrar"),
+    "phone": ("#ec4899", "pentagon", "Phone"), "upi": ("#f97316", "hexagon", "UPI id"), "utr": ("#64748b", "cross", "UTR"),
+    "device": ("#a855f7", "x", "Device"), "host": ("#cbd5e1", "circle-open", "Hosting / network"),
+}
+
+
+def graph_figure(G, around, depth=2, hide_weak=False, max_nodes=70, kinds=None, only_shared=True):
+    """Readable sub-graph around chosen nodes. Nodes coloured by type; dashed lines = weak evidence (shared VPN / big host / registrar)."""
+    import networkx as nx
+    keep = {}
+    for n in around:
+        if n in G:
+            for m, d in nx.single_source_shortest_path_length(G, n, cutoff=depth).items():
+                keep[m] = min(keep.get(m, 9), d)
+    if kinds:
+        keep = {m: d for m, d in keep.items() if G.nodes[m]["kind"] in kinds or m in around}
+    if hide_weak:
+        keep = {m: d for m, d in keep.items() if not G.nodes[m].get("weak") or m in around}
+    nodes = sorted(keep, key=lambda m: (keep[m], -G.degree(m)))[:max_nodes]
+    H = G.subgraph(nodes)
+    if only_shared:       # simple view: drop identifiers that connect to just ONE thing (they only add clutter)
+        leaf = [n for n in H if H.degree(n) <= 1 and H.nodes[n]["kind"] in ("phone", "device", "ip", "upi", "ns", "registrar", "host", "utr") and n not in around]
+        H = H.subgraph([n for n in H if n not in leaf])
+    fig = go.Figure()
+    if len(H) == 0:
+        return fig
+    pos = nx.spring_layout(H, seed=4, k=1.4 / max(len(H) ** .5, 1))
+    for weak in (False, True):
+        xs, ys = [], []
+        for a, b, d in H.edges(data=True):
+            if (d.get("strength") == "weak") == weak:
+                xs += [pos[a][0], pos[b][0], None]; ys += [pos[a][1], pos[b][1], None]
+        if xs:
+            fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines", hoverinfo="none", showlegend=False,
+                                     line=dict(color="#b6c7c3" if weak else "#6b8782", width=1 if weak else 1.6, dash="dot" if weak else "solid")))
+    for kind, (col, sym, lab) in GRAPH_STYLE.items():
+        ns = [n for n in H if H.nodes[n]["kind"] == kind]
+        if not ns:
+            continue
+        txt = [(short(H.nodes[n]["value"]) if kind in ("acct",) and len(str(H.nodes[n]["value"])) > 10 else str(H.nodes[n]["value"]))[:26] for n in ns]
+        hov = [f"<b>{lab}</b><br>{H.nodes[n]['value']}" + ("<br><i>weak: shared by many</i>" if H.nodes[n].get("weak") else "") + f"<br>{H.degree(n)} connections" for n in ns]
+        fig.add_trace(go.Scatter(x=[pos[n][0] for n in ns], y=[pos[n][1] for n in ns], mode="markers+text", text=txt, textposition="top center", name=lab, hovertext=hov, hoverinfo="text",
+                                 textfont=dict(size=10), marker=dict(color=col, symbol=sym, size=[26 if n in around else 17 for n in ns], line=dict(color="white", width=1.5))))
+    fig.update_layout(height=620, margin=dict(l=5, r=5, t=10, b=5), xaxis=dict(visible=False), yaxis=dict(visible=False), plot_bgcolor="white",
+                      legend=dict(orientation="h", y=-0.02), hoverlabel=dict(font_size=13))
+    return fig
+
+
+def corr_figure(corr):
+    """IP-log events vs the nearest bank transaction of the same account (minutes apart)."""
+    if corr.empty:
+        return go.Figure()
+    d = corr.copy(); d["lab"] = d.account_id + " · " + d.ip
+    colors = d["class"].map({"same moment": "#e5484d", "nearby": "#e8a317", "far": "#94a3b8"})
+    fig = go.Figure(go.Bar(y=d.lab, x=d.gap_min, orientation="h", marker_color=colors, hovertext=d.caveat.replace("", "no caveat"),
+                           text=[f"{g:+.0f} min" for g in d.gap_min], textposition="outside"))
+    fig.update_layout(height=max(260, 34 * len(d) + 80), margin=dict(l=5, r=30, t=10, b=30), plot_bgcolor="white", yaxis=dict(autorange="reversed"),
+                      xaxis=dict(title="minutes between the IP-log event and the bank transaction (negative = log came first)", zeroline=True, zerolinecolor="#334"))
+    return fig
+
+
+def events_figure(ev):
+    """One timeline with a lane per kind of evidence: complaints, bank money, domains, IP log."""
+    lanes = ["Complaint", "Bank", "Domain / IP", "IP log"]
+    col = {"Complaint": "#2f6fed", "Bank": "#e8a317", "Domain / IP": "#8b5cf6", "IP log": "#0f8a6d"}
+    fig = go.Figure()
+    for ln in lanes:
+        d = ev[ev.lane == ln]
+        if len(d):
+            fig.add_trace(go.Scatter(x=d.when, y=[ln] * len(d), mode="markers", name=ln, hovertext=d.label, hoverinfo="text+x",
+                                     marker=dict(size=13, color=col[ln], line=dict(color="white", width=1))))
+    fig.update_layout(height=330, margin=dict(l=5, r=5, t=10, b=5), plot_bgcolor="white", yaxis=dict(categoryorder="array", categoryarray=lanes[::-1]),
+                      legend=dict(orientation="h", y=-0.2))
     return fig

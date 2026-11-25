@@ -91,4 +91,13 @@ pd.DataFrame([{"Account Number": a, "Bank Name": b, "Account Opening Date": d, "
               for a, b, d, p, dev, ip in [(M1, "HDFC", "02/10/2026", "9811100001", "DEVX1", "10.1.1.9"), (M2, "SBI", "05/10/2026", "9811100002", "DEVX1", "10.1.1.9"),
                                           (M3, "PNB", "07/10/2026", "9811100003", "DEVX1", "10.1.1.7"), (M4, "Axis", "01/10/2026", "9811100004", "DEVX4", "10.1.1.7"), (M5, "Axis", "09/11/2026", "9811100005", "DEVX1", "10.1.1.9")]]
              ).to_excel(f"{OUT}/5_accounts_KYC_device.xlsx", index=False)
+# 6. domains / IP indicators and 7. IP log (UTC), in friendly column names
+pd.DataFrame([{"Domain": "secure-kyc-update.example", "IP Address": "203.0.113.10", "Registrar": "NameBazaar Pvt Ltd", "Created": "2026-09-20", "Expires": "2026-12-20",
+               "Name Servers": "ns1.fastdns.example, ns2.fastdns.example", "Hosting Provider": "CHEAPVPS-LLC", "ASN": "AS64500", "Country": "NL", "First Seen": "2026-10-03 22:40", "Complaint ID": "31511260012345"},
+              {"Domain": "kyc-verify-sbi.example", "IP Address": "203.0.113.10", "Registrar": "NameBazaar Pvt Ltd", "Created": "2026-09-20", "Expires": "2026-12-20",
+               "Name Servers": "ns1.fastdns.example, ns2.fastdns.example", "Hosting Provider": "CHEAPVPS-LLC", "ASN": "AS64500", "Country": "NL", "First Seen": "2026-10-08 20:15", "Complaint ID": "31511260012399"}]
+             ).to_excel(f"{OUT}/6_domains_IPs.xlsx", index=False)
+pd.DataFrame([{"Timestamp": "2026-10-04T08:12:00Z", "IP Address": "203.0.113.77", "Event": "net_banking_login", "Account": M1, "Source": "Bank access log (UTC)"},
+              {"Timestamp": "2026-10-09T05:40:00Z", "IP Address": "203.0.113.77", "Event": "net_banking_login", "Account": M2, "Source": "Bank access log (UTC)"}]
+             ).to_csv(f"{OUT}/7_ip_log.csv", index=False)
 print("done:", sorted(os.listdir(OUT)))

@@ -1,18 +1,17 @@
 # TraceNet — Money-Trail Intelligence for Cyber-Fraud Investigators
 
 **Team ALTER**  
-**Rajasthan Police Hackathon 2026**  
+**Rajasthan Police Hackathon 2026 (R4C)**  
 **Problem Statement PS05 – Financial Crime Infrastructure & Money-Trail Analysis**
 
-TraceNet is an investigative decision-support platform designed to help cyber-fraud investigators trace stolen money across multiple bank accounts, identify suspicious mule accounts, discover connections between fraud complaints, and prioritize accounts where funds may still be available for recovery.
+TraceNet is an investigative decision-support platform that helps cyber-fraud investigators trace stolen money across bank accounts, identify suspected mule accounts, discover links between complaints, correlate the digital infrastructure behind a fraud (domains, IPs, name servers), and prepare lawful information requests and evidence reports — in one Streamlit application, in **Hindi and English**.
 
-It combines transaction-flow analysis, explainable mule-account scoring, entity linking, cross-complaint intelligence, and automated investigation reports in a single Streamlit-based application.
-
-**Core objective:** Help investigators answer three questions quickly:
+**Core objective:** help investigators answer four questions quickly:
 
 1. Where did the stolen money go?
 2. Which accounts and networks should be investigated first?
 3. How much money may still be available for recovery?
+4. Which complaints, domains and IPs belong to the same operation?
 
 ---
 
@@ -20,35 +19,29 @@ It combines transaction-flow analysis, explainable mule-account scoring, entity 
 
 | Feature | Description |
 |---|---|
-| Money-trail tracing | Follows suspected stolen funds through successive transactions. |
-| Mule-account detection | Identifies suspicious accounts using explainable behavioural rules and anomaly detection. |
-| Fraud-ring discovery | Connects accounts sharing devices, phone numbers, or IP addresses. |
-| Cross-complaint analysis | Identifies relationships between multiple fraud complaints. |
-| Freeze-first prioritization | Ranks accounts based on suspected recoverable funds and risk indicators. |
-| Bank-wise requests | Generates investigation requests grouped by bank. |
-| Lien-file generation | Exports account-level information for bank action. |
-| Watchlist export | Produces lists of high-risk accounts with reasons and ring identifiers. |
-| Pre-payment risk check | Provides HIGH, MEDIUM, or LOW risk indications using available pre-payment information. |
-| Investigation reports | Generates chronological transaction trails, explanations, and recommended actions. |
-| Complaint management | Supports complaint entry, search, filtering, status tracking, and investigation notes. |
-| Golden-hour analysis | Shows how the availability of recoverable funds changes with investigation time. |
+| Money-trail tracing | Follows suspected stolen funds through successive transactions, time-aware, starting from a complaint or from any UTR. |
+| Mule-account detection | Explainable rules (rapid in-out, many small credits, round-figure layering, dormant→active, repeated counterparties, fan-in/out, cycles) plus Isolation Forest. Every flag shows a plain-language reason. |
+| Fraud-ring discovery | Connects accounts sharing devices, phones, IPs or beneficiaries. |
+| Cross-complaint analysis | Scores links between complaints (Strong / Probable / Possible) and groups them into gang cases. |
+| Domain intelligence | Registration age, registrar, name servers, DNS records, certificate-log history and red flags (new domain, short registration, look-alike of a bank name, shared IP / name server). |
+| IP & hosting intelligence | ASN, provider, reverse DNS, VPN / proxy / shared-host hints. Geolocation is indicative only. |
+| Timestamp correlation | IP-log times (UTC) are converted to local time and matched to bank transactions, with a shared-IP caveat. |
+| Digital relationship graph | Domains, IPs, name servers, registrars, phones, UPI ids, accounts and UTRs across cases. Weak links (VPN, CDN, public name servers, same registrar) never merge cases on their own. |
+| Case workspace | One search box for accounts, UTRs, domains, IPs, phones, UPI ids, names and complaint numbers; combined timeline; numbered evidence references; Excel and PDF case file. |
+| Lawful request drafts | Letters to banks, registrars, hosting providers and ISPs with exact IP, timestamp and time zone. The legal provision is left for the investigating officer. |
+| Freeze-first prioritization | Ranks accounts by suspected recoverable money and risk. |
+| Bank-wise requests, lien files, watchlist | Grouped by bank, exportable. |
+| Pre-payment risk check | HIGH / MEDIUM / LOW indication for a receiving account. |
+| Complaint desk | Search, filters, status tracking and notes. |
+| Golden-hour analysis | How recoverable funds shrink with investigation delay. |
 
 ## 2. How to Run TraceNet
 
 ### Windows
 
-**Option A – Quick start**
+**Option A – Quick start:** extract the project and double-click `START_TraceNet.bat`.
 
-1. Download or clone the repository.
-2. Extract the project if downloaded as a ZIP.
-3. Open the project folder.
-4. Double-click `START_TraceNet.bat`.
-5. Wait for dependencies to install and the application to start.
-6. Open the local URL displayed in the terminal.
-
-**Option B – Manual setup**
-
-Open Command Prompt inside the project directory:
+**Option B – Manual setup** (Command Prompt in the project folder):
 
 ```bash
 python -m venv .venv
@@ -73,526 +66,251 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Alternatively, use:
+or simply `bash start.sh`.
 
-```bash
-bash start.sh
-```
-
-**Requirements:** Python 3 and an internet connection for the initial dependency installation.
+**Requirements:** Python 3.10+ and internet access for the first dependency install. The optional public-lookup button also needs internet; everything else works offline.
 
 ## 3. How to Use TraceNet
 
-### Step 1 – Import Data
+### Step 1 – Import data
+Excel (`.xlsx`), CSV and text-based PDF. Files can be dropped in any order and any column naming; the importer detects what each file is and maps columns automatically. You can correct the mapping, or type a complaint in by hand.
 
-TraceNet accepts multiple input files:
-
-- Excel (`.xlsx`)
-- CSV (`.csv`)
-- Text-based PDF (`.pdf`)
-
-The importer attempts to identify file types and map columns automatically. Users can review the detected mappings and correct them when necessary.
-
-Investigators can also enter complaint information manually when a complaint file is unavailable.
-
-### Step 2 – Validate and Prepare
-
-The application displays:
-
-- Number of transactions imported.
-- Number of accounts identified.
-- Number of complaints loaded.
-- Import warnings and data-quality information.
-- Detected column mappings.
-
-Investigators can optionally link names or UPI identifiers to account numbers where the available records support that mapping.
+### Step 2 – Check
+Shows transactions, accounts and complaints found, warnings, detected mappings, and the number of domains / IP-log rows. You can optionally link names or UPI ids to account numbers.
 
 ### Step 3 – Investigate
+Five views: **Complaints** (searchable list) · **One complaint** (card, money trail, mules, actions, notes) · **Connections** between complaints · **Domains & IPs** · **Case workspace**.
 
-The results include:
-
-- Chronological money trails.
-- Suspicious account rankings.
-- Mule-account risk scores.
-- Fraud-ring connections.
-- Money potentially remaining in accounts.
-- Bank-wise requests and lien-file exports.
-- Investigation reports.
-
-Investigators can also switch to **Connections between complaints** to examine relationships across multiple cases.
-
-### Try the Demo
-
-Use the application's **Try with demo data** functionality or import the sample files available in:
-
-```text
-sample_bank_files/
-```
-
-These files are intended for demonstration and testing.
+### Try the demo
+Click **Try with demo data**, or import the files in `sample_bank_files/`.
 
 ## 4. System Architecture
 
-TraceNet follows a modular architecture.
-
 ```text
-                  INPUT DATA
-                       |
-          +------------+------------+
-          |            |            |
-      Bank Files   Complaints   Account/KYC Data
-      CSV/Excel      NCRP        Device/Phone/IP
-      Text-PDF        |
-          +------------+------------+
-                       |
-                DATA IMPORTER
-                tracenet/importer.py
-                       |
-             VALIDATION & MAPPING
-                       |
-                CORE ENGINE
-                tracenet/engine.py
-                       |
-        +--------------+---------------+
-        |              |               |
-   Fund Tracing    Mule Scoring    Entity Linking
-        |              |               |
-        +--------------+---------------+
-                       |
-              CROSS-CASE ANALYSIS
-              tracenet/linking.py
-                       |
-             PRIORITIZATION ENGINE
-                       |
-        +--------------+---------------+
-        |              |               |
-    Dashboard     Bank Requests    Reports
-     app.py       Lien/Watchlist   report.py
-        |              |               |
-        +--------------+---------------+
-                       |
-              INVESTIGATOR OUTPUT
+                    INPUT DATA
+      Bank files · Complaints · KYC/Device · Domains · IP log
+                         |
+                  tracenet/importer.py      (any file → one common schema)
+                         |
+                 tracenet/pipeline.py       (the ONE place that fixes the order of steps)
+                         |
+      +------------------+-------------------+
+      |                  |                   |
+ engine.py          linking.py          intel/ (passive digital evidence)
+ trace · mule       complaint ↔         domains · IPs · time match ·
+ score · freeze     complaint, CASEs    graph · requests · timeline
+      |                  |                   |
+      +------------------+-------------------+
+                         |
+              ui/*.py  (one screen per file)   export.py (Excel / PDF)
+                         |
+                INVESTIGATOR OUTPUT
 ```
 
-### Technology Stack
+### Technology stack
 
 | Layer | Technology |
 |---|---|
-| Programming language | Python |
-| Application framework | Streamlit |
-| Data processing | Pandas |
-| Transaction graph analysis | NetworkX |
-| Anomaly detection | Scikit-learn |
+| Language | Python 3 |
+| Application | Streamlit |
+| Data | Pandas, NumPy |
+| Graphs | NetworkX |
+| Anomaly detection | scikit-learn |
 | Visualization | Plotly |
-| Input formats | CSV, Excel, text-based PDF |
-| Data storage | Local files and generated investigation records |
+| Input | CSV, Excel, text-based PDF (pdfplumber) |
+| Reports | openpyxl, reportlab |
+| Tests | pytest, Streamlit AppTest |
 
 ## 5. Core Technical Modules
 
 | Module | Responsibility |
 |---|---|
-| `app.py` | Main Streamlit application and investigation interface. |
-| `tracenet/engine.py` | Fund tracing, mule scoring, entity linking, prioritization, and exports. |
-| `tracenet/importer.py` | File processing, column detection, mapping, and data preparation. |
-| `tracenet/linking.py` | Relationships and connections across complaints. |
-| `tracenet/explain.py` | Explanations for suspicious activity and investigation findings. |
-| `tracenet/viz.py` | Transaction-trail and network visualizations. |
-| `tracenet/report.py` | Investigation reports and bank-wise request generation. |
-| `tracenet/summary.py` | Investigation summaries. |
-| `tracenet/templates.py` | Reusable report and request templates. |
-| `tracenet/notes.py` | Investigation notes and case-related information. |
-| `tracenet/theme.py` | Application styling and interface components. |
-| `tracenet/i18n.py` | Application language and text resources. |
+| `app.py` | Wiring only: language, steps, router. |
+| `tracenet/config.py` | **Every** threshold, weight and limit. |
+| `tracenet/importer.py` | File detection, column mapping, common schema. |
+| `tracenet/engine.py` | Fund tracing, mule scoring, ring linking, freeze list. |
+| `tracenet/linking.py` | Complaint-to-complaint links, CASE groups, complaint table. |
+| `tracenet/pipeline.py` | `run_analysis()` → one `Analysis` object. |
+| `tracenet/intel/` | Domain/IP lookups (passive), time correlation, relationship graph, evidence references, lawful request drafts, timeline. |
+| `tracenet/explain.py`, `summary.py`, `report.py` | Plain-language explanations, briefs, bank-wise requests. |
+| `tracenet/export.py` | Excel and PDF case file. |
+| `tracenet/viz.py` | Money-trail and relationship pictures. |
+| `tracenet/ui/` | One file per screen. |
+| `tracenet/theme.py`, `i18n.py` | Look and feel; all words in English + Hindi. |
+| `tracenet/notes.py` | Status and investigation notes. |
 
 ## 6. Money-Trail Analysis
 
-A normal transaction graph shows which accounts are connected. However, connectivity alone does not prove that money from a particular fraud travelled through every connected account.
+A plain transaction graph only shows who is connected; it does not prove that stolen money passed through every connected account. TraceNet traces **time-aware**: transaction timestamps, arrival time of suspected funds, the amount remaining at each account, and the outgoing transfers that follow. Unrelated transactions are not treated as part of the trail.
 
-TraceNet uses time-aware fund tracing to follow suspected stolen funds through transactions.
+**Cash-out identification:** ATM / cash withdrawals, wallets, payment services and crypto-exchange references, based on narration text.
 
-Its tracing logic considers:
-
-- Transaction timestamps.
-- Source and destination accounts.
-- Transaction amounts.
-- The arrival time of suspected stolen funds.
-- The amount of suspected funds remaining at each account.
-- Subsequent outgoing transactions.
-
-This helps prevent unrelated transactions from being treated as part of the same stolen-money trail.
-
-### Cash-out Identification
-
-The system recognises potential cash-out destinations using indicators such as:
-
-- ATM withdrawals.
-- Cash withdrawals.
-- Wallet-related transactions.
-- Payment services.
-- Cryptocurrency exchange references.
-
-These indicators depend on the transaction descriptions and available input data.
-
-### Mixed-Fund Handling
-
-When stolen and legitimate funds are mixed in an account, TraceNet uses a conservative accounting convention: outgoing transfers are attributed to the suspected stolen balance first, until that balance is exhausted.
-
-This is an investigative estimation method, not proof of ownership of individual funds.
+**Mixed-fund handling:** outgoing transfers are attributed to the suspected stolen balance first until it is exhausted. This is an investigative estimation convention, not proof of ownership of individual funds, and it can over-estimate stolen funds.
 
 ## 7. Mule-Account Detection
 
-TraceNet combines explainable behavioural rules with anomaly detection.
+Explainable indicators: rapid in-out movement, many small credits from different senders, round-figure layering, dormant account suddenly active, repeated counterparties, fan-in / fan-out, cycles, structuring, shared identity or infrastructure.
 
-The behavioural indicators include:
+Scoring: rule-based risk 70% + Isolation Forest anomaly 30%. An account is flagged at a score of 40 (`config.MULE_FLAG_AT`). The score is a risk indicator, **not** a finding that the account holder committed a crime.
 
-- Rapid movement of incoming funds.
-- Unusual incoming and outgoing transaction patterns.
-- Fan-in and fan-out behaviour.
-- Newly opened accounts.
-- Transaction cycles.
-- Structuring patterns.
-- Shared identity and infrastructure indicators.
+## 8. Entity Linking and Fraud Rings
 
-The implemented scoring approach combines:
+Accounts sharing device IDs, phone numbers or IP addresses are grouped into suspected rings. When none of these are available, shared beneficiaries are used as a fallback. All links are leads that need verification.
 
-- Rule-based risk score: 70%.
-- Isolation Forest anomaly score: 30%.
+## 9. Cross-Complaint and Digital Intelligence
 
-The resulting score helps investigators prioritize accounts for further examination.
+Complaint pairs are scored from: shared accounts, shared cash-out destinations, shared rings, a victim account appearing in another trail, timing similarity, money-flow links — and **digital links**: shared domains, name servers, IPs, phones, UPI ids, devices.
 
-The score is a risk indicator, not a determination that an account holder has committed a crime.
+| Evidence | Treatment |
+|---|---|
+| Same domain / phone / UPI / device | Strong |
+| Shared name server, registrar, hosting | Weak (needs support) |
+| VPN, proxy, CDN, shared-host IP | Weak, never merges cases alone |
 
-## 8. Entity Linking and Fraud-Ring Discovery
+Levels: Strong ≥ 6, Probable ≥ 3, Possible ≥ 1.5 (editable in `config.py`).
 
-Fraudulent networks may use multiple bank accounts while reusing common infrastructure.
+## 10. Digital Evidence — What Is and Is Not Done
 
-TraceNet links accounts that share available identifiers, including:
+**Done (public, passive sources only):** RDAP/WHOIS, DNS A/AAAA/MX/NS/TXT/CNAME over public DNS-over-HTTPS, certificate-transparency logs, IP→ASN. Results are cached and the tool works offline.
 
-- Device IDs.
-- Phone numbers.
-- IP addresses.
+**Not done, by design:**
+- No access to real bank systems, no account freezing.
+- No active scanning or probing of any third-party server.
+- No subscriber, login or non-public records — the tool only **drafts** the lawful request. Such records come only through legal process.
+- Private and documentation IP ranges are never sent to any lookup service.
+- IP geolocation is indicative only; shared / dynamic IPs are flagged as weak evidence.
 
-Accounts connected through shared identifiers can be grouped into suspected fraud rings.
+**Time handling:** bank statements are local time (IST); IP logs are stored as UTC and converted before comparison; all letters state both.
 
-When device, phone, or IP information is unavailable, the system also provides fallback linking based on shared transaction beneficiaries.
+Historical DNS is only used if you import it; there is no free passive source for it.
 
-These relationships are investigative leads and require verification.
+## 11. Freeze-First Prioritization
 
-## 9. Cross-Complaint Intelligence
-
-TraceNet can analyse multiple complaints together using a shared transaction ledger.
-
-This helps investigators identify whether apparently separate fraud incidents may involve the same accounts or networks.
-
-The cross-complaint analysis considers:
-
-- Shared accounts.
-- Shared cash-out destinations.
-- Shared fraud-ring identifiers.
-- Victim accounts appearing in another complaint's money trail.
-- Similarity in complaint timing.
-- Transaction-flow relationships.
-
-Complaint pairs receive relationship scores and can be grouped into Strong, Probable, or Possible categories.
-
-### Cross-Complaint Outputs
-
-- New-complaint alerts.
-- Complaint relationship scores.
-- Shared account identification.
-- Estimated money distribution across complaints.
-- Network visualizations.
-- Time-pattern analysis.
-- Combined investigation reports.
-- Consolidated bank-wise requests.
-
-The scoring weights and relationship thresholds are maintained in:
-
-```text
-tracenet/linking.py
-```
-
-## 10. Freeze-First Prioritization
-
-TraceNet generates a prioritized list of accounts requiring investigation.
-
-The prioritization considers:
-
-1. Suspected money still available in an account.
-2. Mule-account risk score.
-3. Fraud-ring membership.
-4. Transaction-flow relationships.
-
-The purpose is to help investigators focus on potentially recoverable funds before they move further through the financial network.
-
-TraceNet generates recommendations and supporting information. Actual account freezing and lien execution remain decisions and actions of authorized investigators and banks.
-
-## 11. Additional Investigation Capabilities
-
-### Rounds Mode
-
-Simulates investigation as bank statements arrive in successive rounds.
-
-It identifies unknown accounts, organizes requests by bank, and supports further investigation as additional information becomes available.
-
-### Watchlist Export
-
-Exports high-risk accounts with their risk explanations and suspected fraud-ring identifiers.
-
-### Pre-Payment Check
-
-The `precheck` functionality provides HIGH, MEDIUM, or LOW risk indications using available information about the receiving account before a payment.
-
-This is currently an application-level capability; integration with banking applications or payment systems is not included.
-
-### Lien-File Generation
-
-Generates bank-specific CSV files containing account information intended to support the investigation and referral process.
-
-### Complaint Desk
-
-The complaint interface supports:
-
-- Manual complaint entry.
-- Complaint search.
-- Bank, date, amount, and status filters.
-- Complaint-level investigation.
-- Investigation notes.
-- Status tracking.
-
-Available statuses include:
-
-- New.
-- Investigation ongoing.
-- Money frozen.
-- Closed.
-
-The application also supports searching using complaint identifiers, victim information, account numbers, and related case information where those fields are available in the imported data.
+Ranking uses: suspected money still in the account, mule score, ring membership and flow relationships. TraceNet produces recommendations; freezing and lien actions remain with authorised investigators and banks.
 
 ## 12. Supported Input Data
 
-TraceNet supports different types of financial records.
-
-| Input | Information | Important fields |
+| Input | Information | Key fields |
 |---|---|---|
-| Transaction table | Multiple accounts and payments | Date/time, source account, destination account, amount |
-| Bank statement | Individual account activity | Date, narration, debit, credit |
-| Complaint records | Fraud complaint information | Victim account, fraud amount, fraud date/time |
-| Account/KYC records | Account and infrastructure information | Account number, bank, phone, device ID, IP, opening date |
+| Transaction table | Many accounts and payments | Date/time, from, to, amount |
+| Bank statement | One account's activity | Date, narration, debit, credit, balance, UTR |
+| Complaint records | NCRP-style complaints | Victim account, amount, fraud time, (name, phone, UPI) |
+| Account / KYC | Account infrastructure | Account, bank, phone, device, IP, opening date |
+| Domains / IPs | Phishing infrastructure | Domain, IP, registrar, name server, dates |
+| IP log | Who connected when | Timestamp, IP, account / phone |
 
-Optional transaction fields include:
+### Input limitations
+- Scanned / image-only PDFs are not supported (OCR needed first).
+- Some statements identify counterparties only by name or UPI id; use the alias box.
+- Incomplete timestamps make same-day ordering uncertain.
+- Results depend on completeness and accuracy of the records.
 
-- Transaction ID.
-- UTR.
-- Payment mode.
+## 13. Demo Data and Benchmark
 
-The application attempts to map equivalent column names automatically.
+Synthetic data only: 5 complaints, 5 laundering styles, 41 planted mule accounts, 6 domain indicators on `.example` names with documentation-range IPs.
 
-For blank or unsupported bank formats, investigators can use the available templates and map their data into the supported structure.
-
-### Input Limitations
-
-- Scanned or image-only PDFs are not supported by the current text-based PDF importer.
-- Some bank statements identify counterparties only through names or UPI identifiers.
-- Incomplete timestamps can make transaction ordering within the same day uncertain.
-- The quality of results depends on the completeness and accuracy of supplied records.
-
-## 13. Demo Data and Benchmark Results
-
-The repository includes synthetic datasets and sample bank files for demonstration.
-
-The benchmark described in the project documentation uses:
-
-- 14 complaints.
-- Four simulated laundering styles.
-- 36 planted mule accounts.
-- 600 normal accounts in a separate pre-payment risk test.
-
-### Reported Synthetic Benchmark Results
-
-| Metric | Reported result |
+| Metric | Result (`python run_demo.py --test`) |
 |---|---:|
-| Mule detection precision | 100% |
-| Mule detection recall | 94% |
-| Mule detection F1-score | 0.97 |
-| Planted mule accounts detected | 34 / 36 |
-| Cross-complaint planted cases recovered | 4 / 4 |
-| Incorrect cross-complaint links in that demo | 0 |
+| Planted mule accounts found | 38 / 41 (93%) |
+| Innocent accounts wrongly flagged | 1 |
+| Phishing complaints joined into one case via shared domain | NCRP-10 + NCRP-20 |
+| Case kept separate (only a VPN IP in common) | NCRP-50 |
 
-The reported mule detection results use a score threshold of 40.
-
-### Golden-Hour Simulation
-
-The synthetic benchmark reports the following recoverable share when tracing begins at different times:
-
-| Investigation delay | Simulated recoverable share |
-|---|---:|
-| 15 minutes | 100% |
-| 1 hour | 53% |
-| 3 hours | 3% |
-
-These results illustrate how delays can affect the availability of funds in the simulated transaction network.
-
-**Important:** All these figures are based on synthetic data and controlled demonstrations. They are not real-world detection rates, recovery guarantees, or validated operational performance. Actual results would depend on real banking data, data quality, bank response times, and operational conditions.
+**Important:** these figures come from synthetic data and controlled demonstrations. They are not real-world detection rates or recovery guarantees. Real results depend on real banking data, data quality and bank response times.
 
 ## 14. Running the Demo and Tests
 
-The repository includes:
-
-```text
-generate_data.py
-make_sample_files.py
-run_demo.py
-```
-
-### Run the Demo
-
-Activate your virtual environment and install dependencies:
-
 ```bash
 pip install -r requirements.txt
+streamlit run app.py          # the app
+python run_demo.py --test     # synthetic detection check
+pip install -r requirements-dev.txt
+python -m pytest -q           # unit + UI smoke tests (~1 min)
 ```
 
-Launch the application:
-
-```bash
-streamlit run app.py
-```
-
-Use the demo-data option inside the application to explore the investigation workflow.
-
-### Run the Demo Test
-
-```bash
-python run_demo.py --test
-```
-
-The packaged synthetic test reports detection of 34 out of 36 planted mule accounts in the documented run.
-
-Test results can vary if datasets, parameters, or code are modified.
+Developer guide: [`DEVELOPING.md`](DEVELOPING.md).
 
 ## 15. Repository Structure
 
 ```text
 TraceNet/
-│
 ├── app.py
 ├── README.md
+├── DEVELOPING.md
 ├── requirements.txt
+├── requirements-dev.txt
+├── pytest.ini
 ├── .gitignore
-│
-├── .streamlit/
-│   └── config.toml
+├── .streamlit/config.toml
 │
 ├── tracenet/
-│   ├── __init__.py
-│   ├── engine.py
-│   ├── importer.py
-│   ├── linking.py
-│   ├── explain.py
-│   ├── viz.py
-│   ├── report.py
-│   ├── summary.py
-│   ├── templates.py
-│   ├── notes.py
-│   ├── theme.py
-│   └── i18n.py
+│   ├── config.py        engine.py     importer.py   linking.py
+│   ├── pipeline.py      explain.py    summary.py    report.py
+│   ├── export.py        viz.py        templates.py  notes.py
+│   ├── theme.py         i18n.py
+│   ├── intel/           model · timeutil · lookup · analyse · graph
+│   │                    evidence · requests · timeline
+│   └── ui/              common · step1_data · step2_check · results
+│                        complaints · complaint_file · links_page
+│                        digital_page · workspace_page
 │
-├── assets/
-│   ├── rounds.png
-│   ├── trail.png
-│   └── stats.json
+├── tests/
+├── assets/              rounds.png · trail.png · stats.json
+├── data/                synthetic: transactions, accounts, complaints,
+│                        domains, ip_log, ground_truth (.csv)
+├── sample_bank_files/   1_transactions · 2_complaints · 3_statement (CSV)
+│                        4_statement (PDF) · 5_accounts_KYC · 6_domains_IPs
+│                        7_ip_log
 │
-├── data/
-│   ├── transactions.csv
-│   ├── accounts.csv
-│   ├── complaints.csv
-│   └── ground_truth.csv
-│
-├── sample_bank_files/
-│   ├── 1_transactions_all_banks.xlsx
-│   ├── 2_complaints_NCRP.xlsx
-│   ├── 3_statement_5010000001_HDFC.csv
-│   ├── 4_statement_5010000002_SBI.pdf
-│   └── 5_accounts_KYC_device.xlsx
-│
-├── generate_data.py
-├── make_sample_files.py
+├── generate_data.py · generate_digital.py · make_sample_files.py
 ├── run_demo.py
 ├── START_TraceNet.bat
 └── start.sh
 ```
 
-The `data/` and `sample_bank_files/` directories contain demonstration datasets. They should contain synthetic or otherwise approved data only.
+`data/` and `sample_bank_files/` must contain synthetic or approved data only.
 
 ## 16. Real-World Context
 
-Cyber-fraud investigations often involve rapid transfers across multiple accounts, multiple banks, and different payment channels.
-
-The effectiveness of fund recovery can depend on how quickly investigators identify the next account in the transaction chain and communicate with the relevant financial institution.
-
-TraceNet is designed around this operational challenge by combining transaction tracing, account prioritization, cross-complaint intelligence, and bank-wise reporting.
-
-The Indian Suspect Registry and international initiatives such as Singapore's COSMIC demonstrate the importance of sharing financial-crime intelligence across institutions.
-
-TraceNet explores related capabilities through watchlist exports, entity linking, and investigation reports. These are prototype-level capabilities and do not represent direct integration with those systems.
+Cyber-fraud money moves across many accounts and banks within hours, and the phishing infrastructure behind it is often reused across victims. Recovery depends on how quickly the next account in the chain is identified and the bank is contacted — and on proving that separate complaints belong to one operation. TraceNet is built around that operational problem. Initiatives like the Indian Suspect Registry and Singapore's COSMIC show the value of sharing financial-crime intelligence; TraceNet's watchlist export and entity linking explore related ideas at prototype level, without any integration with those systems.
 
 ## 17. Assumptions and Limitations
 
-TraceNet is an investigative decision-support prototype.
-
-The following assumptions and limitations are important:
-
-1. **Bank response:** Further transaction details may depend on information supplied by banks through authorized channels. TraceNet cannot independently obtain unavailable banking records.
-2. **Infrastructure data:** Fraud-ring detection is stronger when reliable device, phone, and IP information is available.
-3. **Incomplete records:** Missing timestamps, transaction identifiers, or counterparty information can reduce tracing accuracy.
-4. **Mixed funds:** The current conservative attribution convention can overestimate the amount of stolen funds in some mixed-fund scenarios.
-5. **Cash-out:** Once funds leave the traceable financial network, recovery may become more difficult.
-6. **Scanned documents:** Image-only PDF statements require OCR or another preprocessing step and are not supported by the current importer.
-7. **Bank integration:** The current prototype does not provide direct live bank API integration or execute account freezes.
-8. **Decision authority:** Risk scores and reports are investigative leads, not legal proof of wrongdoing.
+1. **Bank response:** further records come from banks through authorised channels; TraceNet cannot obtain them itself.
+2. **Infrastructure data:** ring detection is stronger with reliable device, phone and IP data.
+3. **Incomplete records** reduce tracing accuracy.
+4. **Mixed funds:** the conservative convention can overestimate stolen funds.
+5. **Cash-out:** once money leaves the traceable network, recovery is harder.
+6. **Scanned documents** need OCR first.
+7. **No live bank API** and no account freezing.
+8. **Public lookups** are untested at scale against the live internet and depend on third-party services being reachable.
+9. **Decision authority:** scores and reports are leads, not legal proof.
 
 ## 18. Security and Data Handling
 
-Financial investigation records can contain highly sensitive personal and financial information.
-
-For demonstrations:
-
-- Use synthetic sample datasets.
-- Never commit real complainant information or confidential banking records.
-- Never publish passwords, API keys, or access credentials.
-- Keep `.env` files and local configuration secrets outside version control.
-- Restrict access to any deployment that processes real financial information.
-- Apply appropriate access controls, audit logging, retention policies, and encryption before any operational deployment.
-
-The current project is a local application prototype. Its data-handling and access-control model must be strengthened before deployment with real investigation records.
+- Use synthetic data for demonstrations; never commit real complainant or banking data.
+- Never publish passwords, API keys or credentials; keep `.env` files out of version control.
+- `case_notes.json` and `.tracenet_cache/` are local runtime files and are git-ignored.
+- Restrict access to any deployment that handles real records; add access control, audit logging, retention policy and encryption before operational use.
 
 ## 19. Future Scope
 
-Potential improvements include:
+- Secure integration with authorised banking and cybercrime data channels
+- OCR for scanned statements
+- Real-time monitoring where authorised feeds exist
+- Graph-based anomaly detection
+- Role-based access and audit trails
+- Centralised case management
+- Validation on appropriately anonymised real data
 
-- Secure integration with authorized banking and cybercrime data channels.
-- OCR support for scanned bank statements.
-- Real-time transaction monitoring where authorized data feeds are available.
-- More advanced graph-based anomaly detection.
-- Improved multilingual investigation reports.
-- Role-based investigator access and audit trails.
-- Secure centralized case management.
-- Integration with authorized watchlist and intelligence-sharing systems.
-- Further validation using appropriately anonymized real-world datasets.
-
-These are proposed extensions, not claims of existing functionality.
+These are proposed extensions, not existing functionality.
 
 ## 20. Project Objective
 
-TraceNet aims to reduce the time and manual effort required to understand complex money trails in cyber-fraud investigations.
-
-By bringing together time-aware fund tracing, explainable mule detection, fraud-ring discovery, cross-complaint analysis, and prioritized investigation outputs, it provides investigators with a structured starting point for following stolen money and identifying accounts that may require urgent attention.
+To cut the time and manual effort needed to understand a cyber-fraud money trail: time-aware tracing, explainable mule detection, ring and cross-complaint discovery, digital-evidence correlation and ready-to-use reports and requests.
 
 **Trace the money. Connect the cases. Prioritize the action.**
 
 ---
 
-**Team ALTER**  
-Rajasthan Police Hackathon 2026  
-PS05 – Financial Crime Infrastructure & Money-Trail Analysis
+**Team ALTER** · Rajasthan Police Hackathon 2026 · PS05 – Financial Crime Infrastructure & Money-Trail Analysis

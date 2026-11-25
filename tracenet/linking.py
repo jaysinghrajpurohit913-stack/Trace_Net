@@ -18,9 +18,10 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 
+from . import config as C
 from .engine import is_cashout, pretty, trace_funds
 
-STRONG, PROBABLE, POSSIBLE = 6.0, 3.0, 1.5      # score cut-offs
+STRONG, PROBABLE, POSSIBLE = C.LINK_STRONG, C.LINK_PROBABLE, C.LINK_POSSIBLE      # score cut-offs (see config.py)
 
 
 # ------------------------------------------------------------------ 1. joint trace ----
@@ -106,7 +107,8 @@ def _level(score):
     return "strong" if score >= STRONG else "probable" if score >= PROBABLE else "possible" if score >= POSSIBLE else None
 
 
-def analyse_links(ds, feats: pd.DataFrame, rings: list, max_hours: int = 96) -> Links:
+def analyse_links(ds, feats: pd.DataFrame, rings: list, max_hours: int = C.TRACE_MAX_HOURS, digital: dict | None = None) -> Links:
+    """digital: optional {(complaint a, complaint b): (points, reasons)} from intel.graph.digital_points (shared domains / IPs / phones...)."""
     comp, tx = ds.comp.reset_index(drop=True), ds.tx
     jt = joint_trace(tx, comp, max_hours)
     trails = {}
@@ -138,6 +140,7 @@ def analyse_links(ds, feats: pd.DataFrame, rings: list, max_hours: int = 96) -> 
     for s in list(by_acct.values()) + list(by_ring.values()):
         cand |= {frozenset(p) for p in combinations(sorted(s), 2)}
     cand |= set(by_victim)
+    cand |= {frozenset(k) for k in (digital or {})}
 
     rows = []
     for pr in cand:
@@ -146,23 +149,26 @@ def analyse_links(ds, feats: pd.DataFrame, rings: list, max_hours: int = 96) -> 
         sa = sorted(x for x in A & B if not is_cashout(x)); se = sorted(x for x in A & B if is_cashout(x))
         pts, why = 0.0, []
         if sa:
-            pts += min(sum(3.0 if float(mule.get(x, 0)) >= 40 else 1.5 for x in sa), 9.0)
+            pts += min(sum(C.LINK_SHARED_ACCT_MULE if float(mule.get(x, 0)) >= C.MULE_FLAG_AT else C.LINK_SHARED_ACCT_OTHER for x in sa), C.LINK_SHARED_ACCT_CAP)
             why.append(("accts", dict(n=len(sa), names=", ".join(sa[:4]) + (" …" if len(sa) > 4 else ""))))
         if se:
-            pts += min(2.0 * len(se), 4.0)
+            pts += min(C.LINK_SHARED_EXIT * len(se), C.LINK_SHARED_EXIT_CAP)
             why.append(("exit", dict(names=", ".join(pretty(x) for x in se[:3]))))
         ra = {ring_of[x] for x in A if x in ring_of}; rb = {ring_of[x] for x in B if x in ring_of}
         new_rings = (ra & rb) - {ring_of[x] for x in sa if x in ring_of}
         if new_rings:
-            pts += min(2.0 * len(new_rings), 4.0)
+            pts += min(C.LINK_RING * len(new_rings), C.LINK_RING_CAP)
             why.append(("ring", dict(n=len(new_rings))))
         vr = [v for v in (victims[a] if victims[a] in B else None, victims[b] if victims[b] in A else None) if v]
         if vr:
-            pts += 2.0
+            pts += C.LINK_VICTIM_REUSED
             why.append(("victim", dict(acct=vr[0])))
+        dg = (digital or {}).get((a, b)) or (digital or {}).get((b, a))
+        if dg:
+            pts += dg[0]; why += list(dg[1])
         gap_h = abs((fts[a] - fts[b]).total_seconds()) / 3600
-        if pts > 0 and gap_h <= 24:
-            pts += 0.5
+        if pts > 0 and gap_h <= C.LINK_TIME_WINDOW_H:
+            pts += C.LINK_TIME_BONUS
             why.append(("time", dict(h=gap_h)))
         lvl = _level(pts)
         if lvl:
@@ -326,7 +332,8 @@ def group_report(lk: Links, gid: str) -> str:
 
 def _reason_en(k, d):
     return {"accts": "shares {n} account(s): {names}", "exit": "same cash-out point: {names}", "ring": "accounts belong to the same gang ring ({n})",
-            "victim": "victim account {acct} was used to pass the other complaint's money", "time": "frauds within {h:.0f} hours of each other"}[k].format(**d)
+            "victim": "victim account {acct} was used to pass the other complaint's money", "time": "frauds within {h:.0f} hours of each other",
+            "digital": "shared digital evidence ({n}): {names}"}[k].format(**d)
 
 
 def complaint_table(lk: Links) -> pd.DataFrame:
@@ -355,9 +362,10 @@ def complaint_table(lk: Links) -> pd.DataFrame:
                          victim_upi=str(getattr(r, "victim_upi", "") or ""), victim_account=r.victim_account, amount=float(r.amount), fraud_ts=r.fraud_ts,
                          reported_ts=getattr(r, "reported_ts", pd.NaT), delay_h=delay, case=gid if group_size.get(gid, 1) > 1 else "",
                          inside=inside[r.complaint_id], cashed=cashed[r.complaint_id], banks=banks, mules=mules,
-                         first_mule=str(getattr(r, "first_mule", "") or "")))
+                         first_mule=str(getattr(r, "first_mule", "") or ""),
+                         utr=" ".join(x for x in str(getattr(r, "txn_ref", "") or "").replace(";", " ").replace(",", " ").split() if x.lower() != "nan")))
     df = pd.DataFrame(rows)
     df["delay_h"] = pd.to_numeric(df.delay_h, errors="coerce"); df["reported_ts"] = pd.to_datetime(df.reported_ts)
     df["blob"] = (df.complaint_id + " " + df.victim_name + " " + df.victim_phone + " " + df.victim_upi + " " + df.victim_account + " " + df.first_mule + " " +
-                  df.mules.map(" ".join) + " " + df.banks.map(" ".join) + " " + df.case).str.lower()
+                  df.mules.map(" ".join) + " " + df.banks.map(" ".join) + " " + df.case + " " + df.utr).str.lower()
     return df

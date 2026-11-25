@@ -10,7 +10,7 @@ def template_xlsx() -> bytes:
     for line in [
         "TraceNet data template / TraceNet डेटा टेम्पलेट",
         "",
-        "Fill the sheets 'Transactions' and 'Complaints'. 'Accounts' is optional.",
+        "Fill the sheets 'Transactions' and 'Complaints'. 'Accounts', 'Domains' and 'IP log' are optional (digital evidence).",
         "'Transactions' और 'Complaints' शीट भरें। 'Accounts' ज़रूरी नहीं है।",
         "",
         "Delete the example rows first. One row = one payment. Account numbers as text, no spaces.",
@@ -37,4 +37,8 @@ def template_xlsx() -> bytes:
           [["NCRP-001", "9000111122", 150000, "10/11/2026 10:15", "10/11/2026 14:30", "412300000001"]])
     sheet("Accounts", ["Account Number", "Bank", "Account Opening Date", "Mobile No", "Device ID", "IP Address"],
           [["5010000001", "HDFC", "02/10/2026", "9811100001", "DEV1", "10.1.1.9"]])
+    sheet("Domains", ["Domain", "IP Address", "Registrar", "Created", "Expires", "Name Servers", "Hosting Provider", "ASN", "Country", "First Seen", "Complaint ID"],
+          [["secure-kyc-update.example", "203.0.113.10", "Example Registrar", "20/09/2026", "20/12/2026", "ns1.example, ns2.example", "EXAMPLE-HOST", "AS64500", "NL", "03/10/2026 22:40", "NCRP-001"]])
+    sheet("IP log", ["Timestamp", "IP Address", "Event", "Account", "Mobile", "Source"],
+          [["2026-10-04T08:12:00Z", "203.0.113.77", "net_banking_login", "5010000001", "", "Bank access log (UTC)"]])
     buf = io.BytesIO(); wb.save(buf); return buf.getvalue()

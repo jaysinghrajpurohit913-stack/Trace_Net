@@ -429,3 +429,60 @@ T.update({
 })
 ROLE.update({"victim_name": ("Victim / complainant name", "पीड़ित / शिकायतकर्ता का नाम"), "victim_phone": ("Victim mobile number", "पीड़ित का मोबाइल नंबर"),
              "victim_upi": ("Victim UPI id", "पीड़ित की UPI id")})
+
+T.update({"kind_domains": ("Domains / IPs (indicators)", "डोमेन / IP (संकेत)"), "kind_iplog": ("IP log (who logged in from which IP, when)", "IP लॉग (किस IP से कब लॉगिन)")})
+ROLE.update({"domain": ("Domain / URL / IP", "डोमेन / URL / IP"), "registrar": ("Registrar", "रजिस्ट्रार"), "created": ("Domain created on", "डोमेन बना"),
+             "expires": ("Domain expires on", "डोमेन समाप्त"), "nameservers": ("Name servers", "नेम सर्वर"), "hosting": ("Hosting / network provider", "होस्टिंग / नेटवर्क कंपनी"),
+             "asn": ("ASN", "ASN"), "country": ("Country", "देश"), "ssl_issuer": ("SSL certificate issuer", "SSL सर्टिफिकेट जारी करने वाला"),
+             "ssl_first_seen": ("Certificate issued on", "सर्टिफिकेट जारी"), "first_seen": ("First seen", "पहली बार देखा"), "last_seen": ("Last seen", "आख़िरी बार देखा"),
+             "note": ("Note", "नोट"), "event": ("Event (login, OTP...)", "घटना (लॉगिन, OTP...)"), "upi": ("UPI id", "UPI id"), "source": ("Source of the log", "लॉग का स्रोत"),
+             "tz": ("Time zone", "टाइम ज़ोन")})
+
+T.update({"lk_r_digital": ("shared domain / IP / phone / device evidence ({n}): {names}", "साझा डोमेन / IP / फोन / डिवाइस के सबूत ({n}): {names}")})
+
+
+T.update({
+ "view_digital": ("🌐 Domains & IPs", "🌐 डोमेन और IP"), "view_workspace": ("🗂️ Case workspace", "🗂️ केस वर्कस्पेस"),
+ "log_tz_q": ("Time zone of the IP-log times (only if they have no Z / +00:00)", "IP-लॉग के समय का टाइम ज़ोन (सिर्फ़ अगर Z / +00:00 न लिखा हो)"),
+ "log_tz_help": ("Leave empty if times carry their own offset. Plain times are then taken as Indian time.", "अगर समय के साथ ऑफ़सेट लिखा है तो खाली छोड़ें। सादा समय भारतीय समय माना जाएगा।"),
+ "c_digital": ("Digital indicators: {d} domain/IP rows, {l} IP-log events", "डिजिटल संकेत: {d} डोमेन/IP पंक्तियाँ, {l} IP-लॉग घटनाएँ"),
+ "card_domains": ("Reported domains / IPs: {d}", "बताए गए डोमेन / IP: {d}"),
+ "dg_title": ("Domains, IPs and hosting behind the fraud", "धोखाधड़ी के पीछे के डोमेन, IP और होस्टिंग"),
+ "dg_rules": ("Only public sources are queried (registry RDAP, public DNS, certificate logs). No suspect server is ever contacted or scanned. IP location and hosting are hints, not proof. Subscriber / login records are NOT public: they need a lawful request (see 'Requests').",
+              "सिर्फ़ सार्वजनिक स्रोत देखे जाते हैं (RDAP, सार्वजनिक DNS, सर्टिफिकेट लॉग)। किसी संदिग्ध सर्वर से संपर्क या स्कैन नहीं होता। IP की जगह और होस्टिंग संकेत हैं, सबूत नहीं। सब्सक्राइबर / लॉगिन रिकॉर्ड सार्वजनिक नहीं हैं: उनके लिए क़ानूनी अनुरोध चाहिए ('अनुरोध' टैब)।"),
+ "dg_none": ("No domain / IP data yet.", "अभी कोई डोमेन / IP डेटा नहीं है।"),
+ "dg_none_how": ("Add a **Domains / IPs** file and/or an **IP log** in step 1 (the blank template has both sheets). Columns such as domain, IP, registrar, created, name servers, complaint id are recognised automatically.",
+                 "चरण 1 में **डोमेन / IP** फाइल और/या **IP लॉग** जोड़ें (खाली टेम्पलेट में दोनों शीट हैं)। domain, IP, registrar, created, name servers, complaint id जैसे कॉलम अपने आप पहचाने जाते हैं।"),
+ "dg_k_dom": ("Domains", "डोमेन"), "dg_k_dom_s": ("on {n} IPs", "{n} IP पर"), "dg_k_flag": ("Domains with red flags", "लाल-झंडे वाले डोमेन"), "dg_k_flag_s": ("see the reasons", "कारण देखें"),
+ "dg_k_corr": ("Logins at the money moment", "पैसे के पल पर लॉगिन"), "dg_k_corr_s": ("{n} events checked", "{n} घटनाएँ जाँची"), "dg_k_links": ("Complaints linked by domain/IP", "डोमेन/IP से जुड़ी शिकायतें"), "dg_k_links_s": ("pairs", "जोड़ियाँ"),
+ "dg_lookup_title": ("Fill the gaps from public sources (optional, needs internet)", "सार्वजनिक स्रोतों से खाली जानकारी भरें (वैकल्पिक, इंटरनेट चाहिए)"),
+ "dg_lookup_body": ("Looks up registration, DNS, certificates and the network owner. Works offline too: then only your imported data is used. Every lookup is logged as evidence.", "रजिस्ट्रेशन, DNS, सर्टिफिकेट और नेटवर्क मालिक देखता है। इंटरनेट न हो तो सिर्फ़ आपका डाला डेटा चलेगा। हर लुकअप सबूत के रूप में दर्ज होता है।"),
+ "dg_lookup_btn": ("Run public lookups", "सार्वजनिक लुकअप चलाएँ"), "dg_lookup_done": ("{ok} of {n} lookups answered.", "{n} में से {ok} लुकअप का जवाब मिला।"),
+ "dg_t_dom": ("Domains & hosting", "डोमेन और होस्टिंग"), "dg_t_corr": ("Time match (IP ↔ bank)", "समय मिलान (IP ↔ बैंक)"), "dg_t_links": ("Links between complaints", "शिकायतों के बीच कड़ियाँ"), "dg_t_graph": ("Relationship picture", "रिश्तों का चित्र"), "dg_t_req": ("Requests (lawful)", "अनुरोध (क़ानूनी)"),
+ "dg_dom_show": ("each domain with the reasons it looks suspicious.", "हर डोमेन और उसके संदिग्ध लगने के कारण।"), "dg_noflag": ("No red flag from the data we have.", "मौजूद डेटा से कोई लाल झंडा नहीं।"),
+ "dg_ips": ("IP addresses and who runs the network", "IP पते और नेटवर्क चलाने वाला"), "dg_certs": ("Certificates seen in public logs", "सार्वजनिक लॉग में दिखे सर्टिफिकेट"),
+ "dg_dom_next": ("Shared IP / name server across complaints = same operator, likely. Ask the registrar and host (tab 'Requests'). Big shared hosts and VPNs are weak evidence.", "कई शिकायतों में साझा IP / नेम सर्वर = संभवतः एक ही ऑपरेटर। रजिस्ट्रार और होस्ट से पूछें ('अनुरोध' टैब)। बड़े साझा होस्ट और VPN कमज़ोर सबूत हैं।"),
+ "dg_corr_show": ("when an account logged in from an IP, compared with when money moved in that account (IP-log time converted from UTC to Indian time).", "किसी खाते ने किस IP से कब लॉगिन किया और उसी खाते में पैसा कब हिला (IP-लॉग का UTC समय भारतीय समय में बदला गया)।"),
+ "dg_corr_none": ("No IP-log event could be matched to a transaction.", "कोई IP-लॉग घटना किसी लेन-देन से नहीं मिली।"),
+ "dg_corr_caveat": ("Red = within minutes of a transaction. The note column warns when many accounts share the IP (VPN, mobile or office network): then it cannot point to one person.", "लाल = लेन-देन के कुछ मिनट के भीतर। नोट कॉलम चेतावनी देता है जब कई खाते वही IP साझा करें (VPN, मोबाइल या दफ़्तर नेटवर्क): तब यह एक व्यक्ति की ओर इशारा नहीं करता।"),
+ "dg_links_show": ("complaints that share a domain, IP, name server, phone, device or UPI id, even when no mule account is common.", "वे शिकायतें जो डोमेन, IP, नेम सर्वर, फोन, डिवाइस या UPI id साझा करती हैं, भले कोई म्यूल खाता साझा न हो।"),
+ "dg_links_none": ("No complaint pair shares digital evidence.", "किसी शिकायत-जोड़ी में डिजिटल सबूत साझा नहीं।"), "dg_links_cap": ("'strong' = specific to the operator; 'weak' = shared by huge numbers of people (VPN, big host, same registrar). Strong ones are added to the gang-link score.", "'strong' = ऑपरेटर-विशेष; 'weak' = बहुत लोग साझा करते हैं (VPN, बड़ा होस्ट, वही रजिस्ट्रार)। strong गिरोह-कड़ी स्कोर में जुड़ते हैं।"),
+ "dg_links_detail": ("Every shared item", "हर साझा चीज़"),
+ "dg_graph_show": ("complaints, accounts, domains, IPs, phones and UPI ids in one picture. Lines = a recorded relationship; dotted = weak.", "शिकायतें, खाते, डोमेन, IP, फोन और UPI id एक चित्र में। रेखा = दर्ज रिश्ता; बिंदीदार = कमज़ोर।"),
+ "dg_graph_pick": ("Start from complaint(s)", "इन शिकायतों से शुरू करें"), "dg_graph_weak": ("Hide weak items (VPN / big hosts)", "कमज़ोर चीज़ें छिपाएँ (VPN / बड़े होस्ट)"), "dg_graph_depth": ("How far to look (steps)", "कितनी दूर तक (कदम)"),
+ "dg_graph_cap": ("Hover a dot for details. Bigger dot = the complaint you picked.", "विवरण के लिए बिंदु पर माउस ले जाएँ। बड़ा बिंदु = आपकी चुनी शिकायत।"),
+ "dg_req_show": ("ready-to-edit letters to registrars, hosting companies and ISPs, with the exact time in Indian time and UTC.", "रजिस्ट्रार, होस्टिंग कंपनियों और ISP के लिए तैयार पत्र, सटीक समय भारतीय समय और UTC में।"),
+ "dg_req_none": ("Nothing to request yet.", "अभी कोई अनुरोध नहीं।"), "dg_req_pick": ("Letter", "पत्र"), "dg_req_dl": ("Download letter", "पत्र डाउनलोड करें"),
+ "ws_title": ("Case workspace", "केस वर्कस्पेस"), "ws_help": ("Search anything, start from a payment (UTR), see one timeline and download the case file.", "कुछ भी खोजें, किसी भुगतान (UTR) से शुरू करें, एक टाइमलाइन देखें और केस फ़ाइल डाउनलोड करें।"),
+ "ws_search": ("Search everything", "सब कुछ खोजें"), "ws_search_ph": ("account, UTR, domain, IP, phone, UPI id, name, complaint no.", "खाता, UTR, डोमेन, IP, फोन, UPI id, नाम, शिकायत नंबर"), "ws_found": ("{n} matches", "{n} मिले"),
+ "ws_utr_title": ("Start from one payment (UTR)", "एक भुगतान (UTR) से शुरू करें"), "ws_utr": ("UTR / transaction reference", "UTR / लेन-देन संदर्भ"), "ws_utr_none": ("This UTR is not in the data.", "यह UTR डेटा में नहीं है।"),
+ "ws_utr_found": ("Payment found: {src} → {dst}, ₹{amt}, {ts}. Following the money from here:", "भुगतान मिला: {src} → {dst}, ₹{amt}, {ts}। यहाँ से पैसे का पीछा:"),
+ "ws_scope": ("Show / export for", "इसके लिए दिखाएँ / एक्सपोर्ट करें"), "ws_all": ("All complaints", "सभी शिकायतें"),
+ "ws_timeline": ("One timeline", "एक टाइमलाइन"), "ws_timeline_help": ("Complaints, bank movements, domain registrations and IP-log events on one Indian-time clock.", "शिकायतें, बैंक लेन-देन, डोमेन रजिस्ट्रेशन और IP-लॉग घटनाएँ एक ही भारतीय समय पर।"), "ws_timeline_tbl": ("Timeline as a table", "तालिका के रूप में"),
+ "ws_evidence": ("Evidence references", "सबूत संदर्भ"), "ws_evidence_help": ("UTR:… bank line · DOM:… domain row · LOG:… IP-log row · LKP:… public lookup. The same codes appear in the PDF / Excel.", "UTR:… बैंक पंक्ति · DOM:… डोमेन · LOG:… IP-लॉग · LKP:… सार्वजनिक लुकअप। यही कोड PDF / Excel में हैं।"),
+ "ws_export": ("Download the case file", "केस फ़ाइल डाउनलोड करें"), "ws_make_xlsx": ("Prepare Excel", "Excel तैयार करें"), "ws_make_pdf": ("Prepare PDF", "PDF तैयार करें"),
+ "gl_digital": ("\n- **Domain**: a website name. **Registrar**: the company it was bought from.\n- **RDAP / WHOIS**: public registration record of a domain.\n- **DNS (A, NS, MX…)**: public records that say where a domain points.\n- **IP address / ASN**: a computer's network address / the company network that owns it.\n- **Name server (NS)**: the server that answers for a domain.\n- **Certificate transparency**: public log of SSL certificates; shows when a fake site got its padlock.\n- **UTC**: world standard time. India = UTC + 5:30.\n- **UTR**: the unique reference number of a bank payment.\n- **Weak vs strong link**: weak = shared by many unrelated people (VPN, big host).",
+                "\n- **डोमेन**: वेबसाइट का नाम। **रजिस्ट्रार**: जिस कंपनी से ख़रीदा गया।\n- **RDAP / WHOIS**: डोमेन का सार्वजनिक पंजीकरण रिकॉर्ड।\n- **DNS (A, NS, MX…)**: सार्वजनिक रिकॉर्ड जो बताते हैं डोमेन कहाँ जाता है।\n- **IP पता / ASN**: कंप्यूटर का नेटवर्क पता / उसका मालिक नेटवर्क।\n- **नेम सर्वर (NS)**: डोमेन के लिए जवाब देने वाला सर्वर।\n- **सर्टिफिकेट ट्रांसपेरेंसी**: SSL सर्टिफिकेट का सार्वजनिक लॉग; दिखाता है नकली साइट को ताला कब मिला।\n- **UTC**: विश्व मानक समय। भारत = UTC + 5:30।\n- **UTR**: बैंक भुगतान का अनोखा संदर्भ नंबर।\n- **कमज़ोर बनाम मज़बूत कड़ी**: कमज़ोर = बहुत से असंबंधित लोग साझा करते हैं (VPN, बड़ा होस्ट)।"),
+})
+
+T.update({"dg_graph_detail": ("Show every detail (also single-use phones, devices, IPs)", "हर विवरण दिखाएँ (एक बार वाले फोन, डिवाइस, IP भी)")})

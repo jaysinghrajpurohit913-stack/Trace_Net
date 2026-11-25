@@ -19,7 +19,7 @@ import pandas as pd
 
 from .engine import is_cashout
 
-KINDS = ["transactions", "statement", "complaints", "accounts"]
+KINDS = ["transactions", "statement", "complaints", "accounts", "domains", "iplog"]
 
 # ------------------------------------------------------------------ column synonyms ----
 # normalised header text (lower case, letters+digits only) -> role.  First = best.
@@ -62,6 +62,33 @@ SYN = {
         "victim_phone":   ["victimphone", "victimmobile", "victimmobileno", "complainantmobile", "complainantphone", "complainantcontact", "victimcontact"],
         "victim_upi":     ["victimupi", "victimupiid", "victimvpa", "complainantupi"],
     },
+    "domains": {
+        "domain":         ["domain", "domainname", "url", "website", "host", "hostname", "fqdn", "site", "indicator", "ioc", "phishingurl", "scamdomain"],
+        "ip":             ["ip", "ipaddress", "resolvedip", "hostingip", "serverip", "aaddress"],
+        "registrar":      ["registrar", "registrarname", "reseller"],
+        "created":        ["created", "creationdate", "createddate", "registrationdate", "registeredon", "domaincreated", "registered"],
+        "expires":        ["expires", "expirydate", "expirationdate", "expiry", "registryexpirydate", "validuntil"],
+        "nameservers":    ["nameservers", "nameserver", "ns", "dns"],
+        "hosting":        ["hosting", "hostingprovider", "isp", "provider", "organization", "org", "asnorg", "asname", "network"],
+        "asn":            ["asn", "asnumber", "autonomoussystem"],
+        "country":        ["country", "countrycode", "serverlocation"],
+        "ssl_issuer":     ["sslissuer", "certissuer", "issuer", "certificateissuer", "certificateauthority"],
+        "ssl_first_seen": ["sslfirstseen", "certificatedate", "certfirstseen", "sslissued", "certificateissued", "certissued"],
+        "first_seen":     ["firstseen", "firstobserved", "reportedon", "observedon", "dateseen", "reporteddate"],
+        "last_seen":      ["lastseen", "lastobserved"],
+        "complaint_id":   ["complaintid", "complaint", "caseid", "ncrp", "acknowledgementno", "linkedcomplaint", "complaintno", "linkedcomplaints"],
+        "note":           ["note", "notes", "remarks", "comment", "comments"],
+    },
+    "iplog": {
+        "ts":         ["timestamp", "time", "datetime", "eventtime", "loggedat", "date", "utctime", "accesstime", "logtime"],
+        "ip":         ["ip", "ipaddress", "sourceip", "clientip", "loginip", "remoteip", "srcip"],
+        "event":      ["event", "action", "activity", "eventtype", "type", "description"],
+        "account_id": ["account", "accountid", "accountno", "accountnumber", "customerid", "userid"],
+        "phone":      ["phone", "mobile", "mobileno", "msisdn"],
+        "upi":        ["upi", "upiid", "vpa"],
+        "source":     ["source", "logsource", "system", "provider"],
+        "tz":         ["timezone", "tz"],
+    },
     "accounts": {
         "account_id":   ["accountid", "accountno", "accountnumber", "acno", "accno", "acct", "account"],
         "bank":         ["bank", "bankname"],
@@ -77,6 +104,8 @@ REQUIRED = {
     "statement": ["date", "narration"],           # + (debit & credit) or (amount & drcr)
     "complaints": ["victim_account", "amount"],
     "accounts": ["account_id"],
+    "domains": ["domain"],
+    "iplog": ["ts", "ip"],
 }
 _ALL_SYNS = {s for k in SYN.values() for r in k.values() for s in r}
 
@@ -200,6 +229,13 @@ def guess_kind(columns) -> str:
             s += 0.8 * (m["complaint_id"] is not None) + 0.5 * (m["reported_ts"] is not None)
         if k == "accounts":
             s += 0.5 * sum(m[r] is not None for r in ["bank", "device_id", "phone", "ip", "kyc_age_days", "open_date"]) - 0.5
+            lg = detect_roles("iplog", columns)
+            if lg["ts"] and lg["ip"]:                       # a time-stamped IP list is an IP log, not an accounts list
+                s -= 1.0
+        if k == "domains":
+            s += 0.3 * sum(m[r] is not None for r in ["registrar", "created", "nameservers", "hosting", "asn", "ssl_issuer", "expires"])
+        if k == "iplog":
+            s += 0.5 * (m["event"] is not None) + 0.5 * any(m[r] is not None for r in ["account_id", "phone", "upi"])
         score[k] = s / (len(req) + (1 if k == "statement" else 0))
     return max(score, key=score.get)
 
@@ -360,6 +396,7 @@ def _txn_from_statement(fi: FileInfo, notes: list) -> pd.DataFrame:
         deb = amt.where(tag.str.contains(r"DR|D\b|DEBIT|WITHDRAW", regex=True)); cre = amt.where(~tag.str.contains(r"DR|D\b|DEBIT|WITHDRAW", regex=True))
     ts = to_ts(d[m["date"]], d[m["time"]] if m.get("time") else None)
     narr = d[m["narration"]].astype(str)
+    bal = to_amount(d[m["balance"]]) if m.get("balance") else pd.Series(np.nan, index=d.index)
     ref = d[m["ref"]].astype(str).map(norm_id) if m.get("ref") else pd.Series([""] * len(d), index=d.index)
     rows = []
     for i in d.index:
@@ -372,10 +409,10 @@ def _txn_from_statement(fi: FileInfo, notes: list) -> pd.DataFrame:
         other = counterparty(text, ref[i])
         if is_deb:
             dst = f"CASHOUT:{kind}:{owner}" if kind else other
-            rows.append((ref[i], ts[i], owner, dst, amount, channel_of(text)))
+            rows.append((ref[i], ts[i], owner, dst, amount, channel_of(text), text, bal[i]))
         else:
-            rows.append((ref[i], ts[i], f"CASHIN:{kind}:{owner}" if kind == "ATM" or kind == "CASH" else other, owner, amount, channel_of(text)))
-    tx = pd.DataFrame(rows, columns=["txn_id", "ts", "src", "dst", "amount", "channel"])
+            rows.append((ref[i], ts[i], f"CASHIN:{kind}:{owner}" if kind == "ATM" or kind == "CASH" else other, owner, amount, channel_of(text), text, bal[i]))
+    tx = pd.DataFrame(rows, columns=["txn_id", "ts", "src", "dst", "amount", "channel", "narration", "balance"])
     return _finish(tx, fi.name, notes, bank_of={owner: fi.bank} if fi.bank else None)
 
 
@@ -392,6 +429,9 @@ def _finish(tx: pd.DataFrame, name: str, notes: list, bank_of=None) -> pd.DataFr
     if tx.channel.eq("").all() or tx.channel.eq("OTHER").all():
         pass
     tx["channel"] = tx.channel.replace("", "OTHER")
+    for col, blank in (("narration", ""), ("balance", np.nan)):          # PS05 schema: narration + running balance are kept when the file has them
+        if col not in tx:
+            tx[col] = blank
     unk = tx.src.str.startswith(("UNKNOWN", "NAME:")).sum() + tx.dst.str.startswith(("UNKNOWN", "NAME:")).sum()
     if unk:
         notes.append(("info", "unknown_party", dict(n=int(unk), name=name)))
@@ -476,9 +516,38 @@ class Dataset:
     comp: pd.DataFrame
     notes: list
     time_known: bool = True
+    domains: pd.DataFrame = field(default_factory=lambda: __import__("tracenet.intel.model", fromlist=["x"]).empty_domains())
+    iplog: pd.DataFrame = field(default_factory=lambda: __import__("tracenet.intel.model", fromlist=["x"]).empty_iplog())
 
 
-def convert(files: list[FileInfo], manual: pd.DataFrame | None = None) -> Dataset:
+def _domains(fi: FileInfo) -> pd.DataFrame:
+    """Indicator rows (domains and/or IPs). A cell in the domain column that is an IP address is treated as an IP."""
+    from .intel.model import tidy_domains, is_ip
+    m, d = fi.mapping, fi.df
+    g = lambda r: d[m[r]].astype(str) if m.get(r) in d.columns else pd.Series([""] * len(d), index=d.index)
+    out = pd.DataFrame({r: g(r) for r in SYN["domains"]})
+    isip = out.domain.map(is_ip)
+    out.loc[isip, "ip"] = out.loc[isip, "domain"]; out.loc[isip, "domain"] = ""
+    out["source"] = fi.name
+    out = out[(out.domain.str.strip() != "") | (out.ip.str.strip() != "")]
+    return tidy_domains(out)
+
+
+def _iplog(fi: FileInfo, zone: str = "") -> pd.DataFrame:
+    """IP-log events. Times with their own offset (Z, +00:00) are respected; plain times are taken as `zone` (default India)."""
+    from .intel.model import IPLOG_COLS
+    from .intel.timeutil import parse_utc
+    m, d = fi.mapping, fi.df
+    g = lambda r: d[m[r]].astype(str).str.strip() if m.get(r) in d.columns else pd.Series([""] * len(d), index=d.index)
+    tzcol = g("tz")
+    ts = parse_utc(g("ts"), zone or (tzcol[tzcol != ""].iloc[0] if (tzcol != "").any() else ""))
+    out = pd.DataFrame({"ts_utc": ts, "ip": g("ip"), "event": g("event").replace("", "event"), "account_id": g("account_id").map(norm_id).replace("NAN", ""),
+                        "phone": g("phone").replace("nan", ""), "upi": g("upi").str.upper().replace("NAN", ""), "source": g("source").replace("", fi.name),
+                        "tz": zone or "UTC/own offset"})
+    return out[out.ts_utc.notna() & (out.ip != "")][IPLOG_COLS].reset_index(drop=True)
+
+
+def convert(files: list[FileInfo], manual: pd.DataFrame | None = None, log_zone: str = "") -> Dataset:
     from .engine import complete_accounts
     notes, txs, accs, comps, bank_of = [], [], [], [], {}
     for fi in files:
@@ -503,8 +572,13 @@ def convert(files: list[FileInfo], manual: pd.DataFrame | None = None) -> Datase
     time_known = has_time(tx.ts)
     if not time_known:
         notes.append(("warn", "no_time", {}))
+    doms, logs = [], []
     for fi in files:
-        if fi.kind == "accounts":
+        if fi.kind == "domains":
+            doms.append(_domains(fi))
+        elif fi.kind == "iplog":
+            logs.append(_iplog(fi, log_zone))
+        elif fi.kind == "accounts":
             accs.append(_accounts(fi, tx.ts.max()))
         elif fi.kind == "complaints":
             comps.append(_complaints(fi, tx, notes))
@@ -522,7 +596,10 @@ def convert(files: list[FileInfo], manual: pd.DataFrame | None = None) -> Datase
     acc = complete_accounts(acc, tx, comp)
     if len(comp) and "seed_ids" not in comp:
         comp["seed_ids"] = [[] for _ in range(len(comp))]
-    return Dataset(acc=acc, tx=tx, comp=comp, notes=notes, time_known=time_known)
+    from .intel.model import empty_domains, empty_iplog
+    return Dataset(acc=acc, tx=tx, comp=comp, notes=notes, time_known=time_known,
+                   domains=pd.concat(doms, ignore_index=True) if doms else empty_domains(),
+                   iplog=pd.concat(logs, ignore_index=True) if logs else empty_iplog())
 
 
 def load_demo(data_dir="data") -> Dataset:
@@ -530,7 +607,14 @@ def load_demo(data_dir="data") -> Dataset:
     from .engine import load, complete_accounts
     acc, tx, comp = load(data_dir)
     comp = comp.copy(); comp["seed_ids"] = [[] for _ in range(len(comp))]
-    return Dataset(acc=complete_accounts(acc, tx, comp), tx=tx, comp=comp, notes=[], time_known=True)
+    ds = Dataset(acc=complete_accounts(acc, tx, comp), tx=tx, comp=comp, notes=[], time_known=True)
+    from pathlib import Path
+    for fname, attr, fn in (("domains.csv", "domains", _domains), ("ip_log.csv", "iplog", _iplog)):
+        f = Path(data_dir) / fname
+        if f.exists():                                   # the digital demo layer goes through the same importer as real files
+            fi = load_file(fname, f.read_bytes())[0]
+            setattr(ds, attr, fn(fi))
+    return ds
 
 
 # ------------------------------------------------------------------ unmatched parties ----
@@ -554,4 +638,5 @@ def apply_aliases(ds: Dataset, alias: dict) -> Dataset:
     tx = ds.tx.copy(); tx["src"] = tx.src.replace(alias); tx["dst"] = tx.dst.replace(alias)
     tx = tx[tx.src != tx.dst].reset_index(drop=True)
     acc = ds.acc[~ds.acc.account_id.isin(alias)]
-    return Dataset(acc=complete_accounts(acc, tx, ds.comp), tx=tx, comp=ds.comp, notes=ds.notes, time_known=ds.time_known)
+    import dataclasses
+    return dataclasses.replace(ds, acc=complete_accounts(acc, tx, ds.comp), tx=tx)         # keeps domains / IP log too

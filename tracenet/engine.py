@@ -7,6 +7,8 @@ from sklearn.ensemble import IsolationForest
 
 import re
 
+from . import config as C
+
 CASHOUT_PREFIX = "CO"          # old demo-data prefix, kept so the demo data still works
 _CASHOUT_RE = re.compile(r"^(CASHOUT[:|_]|CO\d+_)")
 _BLANKS = {"", "nan", "none", "null", "na", "n/a", "-", "--", "0", "unknown"}
@@ -82,7 +84,7 @@ def naive_reachable(tx, victim, max_hops=6):
     return set(nx.single_source_shortest_path_length(G, victim, cutoff=max_hops)) - {victim}
 
 
-def trace_funds(tx, victim, fraud_ts, amount, max_hours=96, as_of=None, seed_txn_ids=None):
+def trace_funds(tx, victim, fraud_ts, amount, max_hours=C.TRACE_MAX_HOURS, as_of=None, seed_txn_ids=None):
     """Follow stolen money forward in time.
 
     Taint accounting ('tainted-first', conservative): a transfer can only carry as much
@@ -167,10 +169,39 @@ def account_features(tx, acc):
         if 2 < len(comp) <= 12: on_cycle |= comp
     f["in_cycle"] = f.index.isin(on_cycle).astype(int)
 
+    _extra_features(f, tx)
+
     # shared identifiers
     for col in ["device_id", "phone", "ip"]:
         f[f"shared_{col}"] = f.groupby(col)[col].transform("size").fillna(1) - 1   # blanks never match
     f["shared_ids"] = f[["shared_device_id", "shared_phone", "shared_ip"]].sum(axis=1)
+    return f
+
+
+def _extra_features(f, tx):
+    """PS05 indicators: round-figure layering, many small credits, dormant account waking up, repeated counterparties."""
+    out = tx.assign(round_=(tx.amount >= C.ROUND_MIN_AMOUNT) & (tx.amount % C.ROUND_STEP == 0))
+    r = out.groupby("src").agg(n=("round_", "size"), k=("round_", "sum"))
+    f["round_count"] = r.k.reindex(f.index).fillna(0)
+    f["round_share"] = (r.k / r.n).reindex(f.index).fillna(0)
+    small = tx[tx.amount < C.SMALL_CREDIT]
+    f["small_in_peers"] = small.groupby("dst").src.nunique().reindex(f.index).fillna(0)
+
+    # dormant -> active: longest quiet spell between two events, followed by a burst within 24h
+    ev = pd.concat([tx[["src", "ts"]].rename(columns={"src": "a"}), tx[["dst", "ts"]].rename(columns={"dst": "a"})]).sort_values("ts")
+    awake = {}
+    for a, g in ev.groupby("a"):
+        if a not in f.index or len(g) < C.DORMANT_BURST + 1:
+            continue
+        t = g.ts.values
+        gaps = np.diff(t) / np.timedelta64(1, "D")
+        for i in np.where(gaps >= C.DORMANT_DAYS)[0]:
+            if ((t[i + 1:] - t[i + 1]) <= np.timedelta64(24, "h")).sum() >= C.DORMANT_BURST:
+                awake[a] = 1; break
+    f["dormant_awake"] = pd.Series(awake).reindex(f.index).fillna(0).astype(int)
+
+    pair = pd.concat([tx[["src", "dst"]].rename(columns={"src": "a", "dst": "b"}), tx[["dst", "src"]].rename(columns={"dst": "a", "src": "b"})])
+    f["repeat_peer"] = pair.groupby(["a", "b"]).size().groupby("a").max().reindex(f.index).fillna(0)
     return f
 
 
@@ -184,25 +215,30 @@ def score_mules(f):
             reasons[a].append(text)
         rule.loc[mask] += pts
 
+    P = C.MULE_POINTS
     active = (f.in_cnt > 0) & (f.out_cnt > 0)
-    add(active & (f.passthrough > .9) & (f.hold_min < 60), 30, "Forwards almost all the money within an hour")
-    add((f.in_cnt >= 1) & (f.kyc_age_days < 90) & (f.in_amt > 40000), 15, "New account (under 90 days) handling large amounts")
-    add((f.in_peers >= 3) & (f.out_peers <= 3) & active, 10, "Receives money from many different people")
-    add((f.out_peers >= 2) & (f.passthrough > .9) & active, 10, "Splits the money across several accounts")
-    add(f.in_cycle == 1, 15, "Money goes round in circles between accounts")
-    add(f.repeat_out >= 4, 15, "Repeated similar-sized transfers (to stay under limits)")
-    add(f.shared_ids >= 2, 20, "Uses the same phone, device or internet address as other accounts")
+    add(active & (f.passthrough > C.PASSTHROUGH_RATIO) & (f.hold_min < C.FAST_HOLD_MIN), P["fast_passthrough"], "Forwards almost all the money within an hour")
+    add((f.in_cnt >= 1) & (f.kyc_age_days < C.NEW_ACCOUNT_DAYS) & (f.in_amt > C.NEW_ACCOUNT_BIG_IN), P["new_big"], "New account (under 90 days) handling large amounts")
+    add((f.in_peers >= C.MANY_SENDERS) & (f.out_peers <= 3) & active, P["many_senders"], "Receives money from many different people")
+    add((f.out_peers >= 2) & (f.passthrough > C.PASSTHROUGH_RATIO) & active, P["splits"], "Splits the money across several accounts")
+    add(f.in_cycle == 1, P["cycle"], "Money goes round in circles between accounts")
+    add(f.repeat_out >= C.STRUCT_REPEATS, P["repeats"], "Repeated similar-sized transfers (to stay under limits)")
+    add(f.shared_ids >= 2, P["shared_ids"], "Uses the same phone, device or internet address as other accounts")
+    add((f.round_count >= C.ROUND_MIN_COUNT) & (f.round_share >= C.ROUND_SHARE) & active, P["round_figures"], "Sends round-figure amounts (layering)")
+    add((f.small_in_peers >= C.SMALL_CREDIT_SENDERS) & active, P["many_small"], "Many small credits from unrelated senders")
+    add((f.dormant_awake == 1) & active, P["dormant_awake"], "Was dormant, then suddenly became active")
+    add((f.repeat_peer >= C.REPEAT_PEER) & active & (f.passthrough > C.PASSTHROUGH_RATIO), P["repeat_peer"], "Same counterparty again and again")
     rule = rule.clip(0, 100)
 
     X = f[["passthrough", "hold_min", "in_peers", "out_peers", "kyc_age_days", "shared_ids",
            "repeat_out", "in_cycle"]].copy()
     X["hold_min"] = np.log1p(X.hold_min); X["kyc_age_days"] = np.log1p(X.kyc_age_days)
     out = f.copy()
-    if len(X) >= 30:
-        iso = IsolationForest(n_estimators=200, contamination=0.06, random_state=1).fit(X)
+    if len(X) >= C.ML_MIN_ACCOUNTS:
+        iso = IsolationForest(n_estimators=200, contamination=C.ML_CONTAMINATION, random_state=1).fit(X)
         an = -iso.score_samples(X)
         an = (an - an.min()) / (an.max() - an.min() + 1e-9) * 100
-        out["mule_score"] = (0.7 * rule + 0.3 * an).round(1)
+        out["mule_score"] = ((1 - C.ML_WEIGHT) * rule + C.ML_WEIGHT * an).round(1)
     else:                      # too few accounts for a meaningful anomaly model: rules only
         an = np.zeros(len(X))
         out["mule_score"] = rule.round(1)
@@ -253,7 +289,7 @@ def freeze_list(trail, scored, rings=None):
     return df.sort_values("priority", ascending=False).reset_index(drop=True)
 
 
-def evaluate(scored, truth, thr=40):
+def evaluate(scored, truth, thr=C.MULE_FLAG_AT):
     t = truth.set_index("account_id")
     y = scored.index.isin(t.index[t.role.str.startswith("mule")])
     p = scored.mule_score >= thr
@@ -290,7 +326,7 @@ def trace_in_rounds(tx, acc, victim, fraud_ts, amount, as_of=None, max_rounds=12
     return rounds
 
 
-def link_by_flow(tx, scored, thr=40):
+def link_by_flow(tx, scored, thr=C.MULE_FLAG_AT):
     """Fallback ring linking when device/phone/IP metadata is NOT available:
     suspicious accounts that pay the same beneficiary (e.g. the same cash-out point)
     or each other are grouped together."""
@@ -318,7 +354,7 @@ def merge_rings(*ring_lists):
 
 
 # ------------------------------------------- adopted from global practice ----
-def export_watchlist(scored, rings, thr=40):
+def export_watchlist(scored, rings, thr=C.MULE_FLAG_AT):
     """Intelligence-sharing file for banks (idea: Suspect Registry / COSMIC-style sharing,
     but covering deeper layers, with reasons and ring ids)."""
     ring_of = {a: f"RING-{i}" for i, r in enumerate(rings, 1) for a in r}
